@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-const MAX_RECORDING_TIME = 30000; // 30 seconds
+const MAX_RECORDING_TIME = 20000; // 20 seconds
 
 export default function VoiceRecorder({ onRecordingComplete, isDisabled }) {
   const [isRecording, setIsRecording] = useState(false);
