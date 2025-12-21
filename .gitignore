@@ -33,3 +33,4 @@ google-credentials.json
 # Temporary files
 *.tmp
 *.temp
+.vercel
