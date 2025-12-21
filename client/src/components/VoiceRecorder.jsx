@@ -22,13 +22,44 @@ export default function VoiceRecorder({ onRecordingComplete, isDisabled }) {
 
   const startRecording = async () => {
     try {
+      // Check MediaRecorder support
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Браузер не поддерживает запись аудио. Используйте Chrome, Safari 14+, или Firefox.');
+        return;
+      }
+
+      if (!window.MediaRecorder) {
+        alert('Браузер не поддерживает MediaRecorder API. Обновите браузер.');
+        return;
+      }
+
       // Request microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
+      // Detect supported MIME type (Safari compatibility)
+      let mimeType = 'audio/webm;codecs=opus';
+      let audioType = 'audio/webm';
+
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus';
+        audioType = 'audio/webm';
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4';
+        audioType = 'audio/mp4';
+      } else if (MediaRecorder.isTypeSupported('audio/aac')) {
+        mimeType = 'audio/aac';
+        audioType = 'audio/aac';
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        mimeType = 'audio/webm';
+        audioType = 'audio/webm';
+      }
+
+      console.log('Using MIME type:', mimeType);
+
       // Create MediaRecorder
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus',
+        mimeType: mimeType,
       });
 
       mediaRecorderRef.current = mediaRecorder;
@@ -41,7 +72,7 @@ export default function VoiceRecorder({ onRecordingComplete, isDisabled }) {
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(chunksRef.current, { type: audioType });
 
         // Validate recording
         if (audioBlob.size === 0) {

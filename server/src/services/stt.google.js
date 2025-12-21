@@ -33,18 +33,45 @@ else {
 }
 
 /**
+ * Detect audio encoding from buffer
+ * @param {Buffer} audioBuffer - Audio buffer
+ * @returns {string} - Detected encoding type
+ */
+function detectAudioEncoding(audioBuffer) {
+  // Check file signature (magic bytes)
+  const header = audioBuffer.slice(0, 12).toString('hex');
+
+  // WebM signature: 1a 45 df a3
+  if (header.startsWith('1a45dfa3')) {
+    return 'WEBM_OPUS';
+  }
+
+  // MP4/M4A signature: 66 74 79 70 (ftyp)
+  if (audioBuffer.toString('ascii', 4, 8) === 'ftyp') {
+    return 'MP3'; // Google STT treats MP4/AAC as MP3 encoding
+  }
+
+  // Default to WEBM_OPUS
+  return 'WEBM_OPUS';
+}
+
+/**
  * Transcribe audio using Google Cloud Speech-to-Text
- * @param {Buffer} audioBuffer - Audio buffer in webm/opus format
+ * @param {Buffer} audioBuffer - Audio buffer (webm, mp4, or aac format)
  * @returns {Promise<string>} - Transcribed text
  */
 export async function transcribeAudio(audioBuffer) {
   try {
+    // Detect encoding
+    const encoding = detectAudioEncoding(audioBuffer);
+    console.log(`Detected audio encoding: ${encoding}`);
+
     const request = {
       audio: {
         content: audioBuffer.toString('base64'),
       },
       config: {
-        encoding: 'WEBM_OPUS',
+        encoding: encoding,
         sampleRateHertz: 48000,
         languageCode: 'kk-KZ',
         model: 'default',
