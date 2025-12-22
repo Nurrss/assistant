@@ -8,6 +8,9 @@ dotenv.config();
 
 const app = express();
 
+// Trust proxy - required for Vercel/serverless deployments
+app.set('trust proxy', true);
+
 // CORS configuration
 const corsOptions = {
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',

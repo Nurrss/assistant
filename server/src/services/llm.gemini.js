@@ -11,8 +11,8 @@ Keep answers short, clear, and natural for speech.
 Do not use emojis or markdown.
 Be helpful, friendly, and conversational.`;
 
-// Using gemini-1.5-pro for best quality (50 requests/day, better than 2.5-flash)
-const MODEL_NAME = 'gemini-1.5-pro';
+// Using gemini-2.5-flash for best performance and latest features (20 requests/day free tier)
+const MODEL_NAME = 'gemini-2.5-flash';
 
 /**
  * Generate AI response using Google Gemini
