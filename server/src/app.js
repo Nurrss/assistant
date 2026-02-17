@@ -9,8 +9,8 @@ dotenv.config();
 
 const app = express();
 
-// Trust proxy - required for Vercel/serverless deployments
-app.set('trust proxy', true);
+// Trust exactly one proxy (Vercel) for X-Forwarded-For; required for rate limit IP detection
+app.set('trust proxy', 1);
 
 // CORS configuration
 const corsOptions = {
