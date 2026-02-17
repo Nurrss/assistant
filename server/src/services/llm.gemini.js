@@ -1,9 +1,10 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import axios from 'axios';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const MODEL_NAME = 'gemini-2.5-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/${MODEL_NAME}:generateContent`;
 
 const SYSTEM_PROMPT = `You are a Kazakh-speaking voice assistant.
 Always respond ONLY in Kazakh language.
@@ -11,46 +12,53 @@ Keep answers short, clear, and natural for speech.
 Do not use emojis or markdown.
 Be helpful, friendly, and conversational.`;
 
-// Using gemini-2.5-flash for best performance and latest features (20 requests/day free tier)
-const MODEL_NAME = 'gemini-2.5-flash';
-
 /**
- * Generate AI response using Google Gemini
+ * Generate AI response using Google Gemini (REST API via axios).
+ * Uses direct HTTP instead of SDK fetch — more reliable in serverless (e.g. Vercel).
  * @param {string} userMessage - User's transcribed message
  * @returns {Promise<string>} - AI response text
  */
 export async function generateResponse(userMessage) {
   try {
-    if (!process.env.GEMINI_API_KEY) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
       throw new Error('GEMINI_API_KEY is not configured');
     }
 
-    // Use the confirmed working model
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-
     const prompt = `${SYSTEM_PROMPT}\n\nUser: ${userMessage}\n\nAssistant:`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const { data } = await axios.post(
+      `${GEMINI_URL}?key=${apiKey}`,
+      {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+        },
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 45000,
+        validateStatus: (status) => status === 200,
+      }
+    );
 
-    if (!text || text.trim().length === 0) {
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text || String(text).trim().length === 0) {
       return 'Кешіріңіз, мен сіздің сұрағыңызды түсінбедім.';
     }
 
-    return text.trim();
+    return String(text).trim();
   } catch (error) {
     console.error('❌ Gemini API Error:', error.message);
-    console.error('Stack:', error.stack);
-
-    // Check if it's an API key issue
-    if (error.message.includes('API key') || error.message.includes('401')) {
-      console.error(
-        '⚠️  API Key issue detected. Please verify your GEMINI_API_KEY'
-      );
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
+    if (error.message?.includes('API key') || error.response?.status === 401) {
+      console.error('⚠️  API Key issue. Please verify GEMINI_API_KEY');
     }
 
-    // Fallback response in Kazakh
     return 'Кешіріңіз, қазір техникалық қиындықтар бар. Кейінірек қайталап көріңіз.';
   }
 }
