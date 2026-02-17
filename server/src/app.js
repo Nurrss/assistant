@@ -3,6 +3,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import voiceChatRouter from './routes/voiceChat.js';
+import { bot } from './bot/core.js';
 
 dotenv.config();
 
@@ -22,7 +23,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Rate limiting
+// Body parser for JSON (must be before routes that use req.body)
+app.use(express.json());
+
+// Rate limiting (applied to /api/* except webhook to avoid blocking Telegram)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: parseInt(process.env.RATE_LIMIT_MAX) || 50,
@@ -30,24 +34,44 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+app.use('/api/', (req, res, next) => {
+  if (req.path.endsWith('telegram-webhook')) return next();
+  return limiter(req, res, next);
+});
 
-app.use('/api/', limiter);
-
-// Body parser for JSON
-app.use(express.json());
+// Telegram webhook (for Vercel/serverless — no long-running process)
+if (bot) {
+  const webhookPath = '/api/telegram-webhook';
+  const secretToken = process.env.TELEGRAM_WEBHOOK_SECRET || undefined;
+  app.post(webhookPath, async (req, res) => {
+    try {
+      const middleware = bot.webhookCallback(webhookPath, { secretToken });
+      await middleware(req, res, () => {
+        if (!res.headersSent) res.status(403).end();
+      });
+    } catch (err) {
+      console.error('Telegram webhook error:', err);
+      if (!res.headersSent) res.status(500).end();
+    }
+  });
+}
 
 // Routes
 app.use('/api', voiceChatRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {
+  const endpoints = {
+    health: 'GET /api/health',
+    voiceChat: 'POST /api/voice-chat',
+  };
+  if (bot) {
+    endpoints.telegramWebhook = 'POST /api/telegram-webhook';
+  }
   res.json({
     message: 'AI Voice Assistant API',
     version: '1.0.0',
-    endpoints: {
-      health: '/api/health',
-      voiceChat: 'POST /api/voice-chat',
-    },
+    endpoints,
   });
 });
 

@@ -34,25 +34,47 @@ else {
 
 /**
  * Detect audio encoding from buffer
+ * Supports: WebM/Opus (browser), MP4/M4A, OGG/Opus (Telegram voice)
  * @param {Buffer} audioBuffer - Audio buffer
- * @returns {string} - Detected encoding type
+ * @returns {string} - Detected encoding type for Google Speech-to-Text
  */
 function detectAudioEncoding(audioBuffer) {
-  // Check file signature (magic bytes)
+  if (!audioBuffer || audioBuffer.length < 8) {
+    return 'WEBM_OPUS';
+  }
+
   const header = audioBuffer.slice(0, 12).toString('hex');
+  const ascii4 = audioBuffer.toString('ascii', 0, 4);
+  const ascii48 = audioBuffer.toString('ascii', 4, 8);
+
+  // OGG signature: "OggS" (4f 67 67 53) — Telegram voice messages
+  if (ascii4 === 'OggS') {
+    return 'OGG_OPUS';
+  }
 
   // WebM signature: 1a 45 df a3
   if (header.startsWith('1a45dfa3')) {
     return 'WEBM_OPUS';
   }
 
-  // MP4/M4A signature: 66 74 79 70 (ftyp)
-  if (audioBuffer.toString('ascii', 4, 8) === 'ftyp') {
+  // MP4/M4A signature: .... ftyp
+  if (ascii48 === 'ftyp') {
     return 'MP3'; // Google STT treats MP4/AAC as MP3 encoding
   }
 
-  // Default to WEBM_OPUS
   return 'WEBM_OPUS';
+}
+
+/**
+ * Get sample rate for encoding (Google STT requirement)
+ * @param {string} encoding - Encoding type
+ * @returns {number} - Sample rate in Hz
+ */
+function getSampleRateForEncoding(encoding) {
+  if (encoding === 'OGG_OPUS') {
+    return 48000; // Telegram voice is typically 48kHz Opus
+  }
+  return 48000;
 }
 
 /**
@@ -66,13 +88,15 @@ export async function transcribeAudio(audioBuffer) {
     const encoding = detectAudioEncoding(audioBuffer);
     console.log(`Detected audio encoding: ${encoding}`);
 
+    const sampleRateHertz = getSampleRateForEncoding(encoding);
+
     const request = {
       audio: {
         content: audioBuffer.toString('base64'),
       },
       config: {
         encoding: encoding,
-        sampleRateHertz: 48000,
+        sampleRateHertz,
         languageCode: 'kk-KZ',
         model: 'default',
         enableAutomaticPunctuation: true,
@@ -81,7 +105,7 @@ export async function transcribeAudio(audioBuffer) {
 
     const [response] = await client.recognize(request);
     const transcription = response.results
-      .map(result => result.alternatives[0].transcript)
+      .map((result) => result.alternatives[0].transcript)
       .join('\n');
 
     if (!transcription || transcription.trim().length === 0) {
