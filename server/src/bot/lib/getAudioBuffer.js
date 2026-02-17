@@ -20,7 +20,7 @@ export async function getAudioBuffer(telegram, fileId) {
   const url = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
   const response = await axios.get(url, {
     responseType: 'arraybuffer',
-    timeout: 30000,
+    timeout: 55000, // 55s (Vercel Pro ~60s limit; leave margin for STT/LLM/TTS)
     maxContentLength: 20 * 1024 * 1024, // 20 MB
   });
 

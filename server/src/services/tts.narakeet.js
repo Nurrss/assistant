@@ -16,20 +16,16 @@ export async function synthesizeSpeech(text) {
       throw new Error('NARAKEET_API_KEY is not configured');
     }
 
-    const response = await axios.post(
-      NARAKEET_API_URL,
-      text,
-      {
-        headers: {
-          'x-api-key': process.env.NARAKEET_API_KEY,
-          'Content-Type': 'text/plain',
-          'Accept': 'application/octet-stream',
-          'x-voice': 'aidar', // Kazakh voice
-        },
-        responseType: 'arraybuffer',
-        timeout: 10000, // 10 seconds timeout
-      }
-    );
+    const response = await axios.post(NARAKEET_API_URL, text, {
+      headers: {
+        'x-api-key': process.env.NARAKEET_API_KEY,
+        'Content-Type': 'text/plain',
+        Accept: 'application/octet-stream',
+        'x-voice': 'aidar', // Kazakh voice
+      },
+      responseType: 'arraybuffer',
+      timeout: 45000, // 45s — Narakeet can be slow; Vercel Pro ~60s total
+    });
 
     if (!response.data || response.data.byteLength === 0) {
       throw new Error('Empty audio response from Narakeet');
