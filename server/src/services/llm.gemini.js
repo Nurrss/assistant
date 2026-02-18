@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const MODEL_NAME = 'gemini-2.5-flash';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/${MODEL_NAME}:generateContent`;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent`;
 
 const SYSTEM_PROMPT = `You are a Kazakh-speaking voice assistant.
 Always respond ONLY in Kazakh language.
@@ -38,7 +38,7 @@ export async function generateResponse(userMessage) {
       },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 45000,
+        timeout: 22000, // 22s — fail fast on Vercel; reply to user before Telegraf 90s
         validateStatus: (status) => status === 200,
       }
     );
