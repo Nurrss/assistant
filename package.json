@@ -1,0 +1,9 @@
+{
+  "name": "assistant-bot-root",
+  "private": true,
+  "description": "Root package for Railway: install server deps and run Telegram bot",
+  "scripts": {
+    "postinstall": "cd server && npm install",
+    "start": "cd server && npm run bot"
+  }
+}

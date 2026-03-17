@@ -1,0 +1,9 @@
+# Railway/Nixpacks: build from repo root, run Telegram bot
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[start]
+cmd = "npm start"
