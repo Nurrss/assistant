@@ -46,3 +46,4 @@
 ## Зависимости окружения
 
 Те же, что и для API: `GEMINI_API_KEY`, Google credentials для STT, `NARAKEET_API_KEY`. Плюс `TELEGRAM_BOT_TOKEN`.
+121
